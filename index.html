@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Video Editor</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 400px; margin: 40px auto; padding: 20px; color: #1f2937; }
+    .field-label { display: block; font-weight: 600; margin-bottom: 8px; }
+    .text-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+    .text-input:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+    .btn-submit { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .btn-submit:hover { background: #1d4ed8; }
+    .btn-submit:focus-visible { outline: 3px solid #60a5fa; }
+    .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; }
+    .banner { display: none; align-items: center; justify-content: space-between; gap: 8px; margin-top: 16px; padding: 12px; border-radius: 6px; background-color: #ecfdf5; color: #065f46; font-weight: 500; border: 1px solid #a7f3d0; }
+    .btn-close { background: none; border: none; color: #065f46; font-size: 1.25rem; font-weight: bold; cursor: pointer; padding: 4px 8px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: background-color 0.2s, color 0.2s; }
+    .btn-close:hover { background-color: #d1fae5; color: #047857; }
+    .btn-close:focus-visible { outline: 2px solid #047857; outline-offset: 1px; }
+  </style>
+</head>
+<body>
+  <h1 style="font-size: 1.8rem; margin-bottom: 12px;">AI Video Editor 🎬</h1>
+  <p style="margin-bottom: 24px; color: #4b5563;">Create high-quality cuts with our AI engine.</p>
+  <form id="editor-form" aria-label="Video generator" style="display: flex; flex-direction: column; gap: 16px;">
+    <div>
+      <label for="prompt" class="field-label">
+        AI Editing Prompt <span style="color: #dc2626;" aria-hidden="true">*</span>
+      </label>
+      <input id="prompt" class="text-input" type="text" required placeholder="e.g., Trim silent parts and zoom in" />
+    </div>
+    <button id="submit-btn" class="btn-submit" type="submit" aria-label="Generate video">
+      Generate Video
+    </button>
+  </form>
+  <div id="success-banner" class="banner" role="status" aria-live="polite">
+    <span id="success-text"></span>
+    <button id="close-banner" class="btn-close" aria-label="Dismiss success message" type="button">&times;</button>
+  </div>
+  <script>
+    const form = document.getElementById('editor-form');
+    const btn = document.getElementById('submit-btn');
+    const banner = document.getElementById('success-banner');
+    const bannerText = document.getElementById('success-text');
+    const closeBtn = document.getElementById('close-banner');
+    const promptInput = document.getElementById('prompt');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      btn.innerHTML = 'Generating...';
+      btn.setAttribute('aria-label', 'Generating video, please wait');
+      banner.style.display = 'none';
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = 'Generate Video';
+        btn.setAttribute('aria-label', 'Generate video');
+        bannerText.textContent = '✨ AI video cuts generated successfully!';
+        banner.style.display = 'flex';
+      }, 1200);
+    });
+
+    closeBtn.addEventListener('click', () => {
+      banner.style.display = 'none';
+      promptInput.focus();
+    });
+  </script>
+</body>
+</html>
