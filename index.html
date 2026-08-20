@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Video Editor</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 400px; margin: 40px auto; padding: 20px; color: #1f2937; }
+    .field-label { display: block; font-weight: 600; margin-bottom: 8px; }
+    .input-wrapper { position: relative; display: flex; align-items: center; }
+    .text-input { width: 100%; padding: 10px 60px 10px 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+    .text-input:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+    .btn-clear { position: absolute; right: 8px; background: none; border: none; color: #4b5563; font-size: 1.1rem; cursor: pointer; padding: 2px 6px; border-radius: 4px; display: none; align-items: center; justify-content: center; gap: 3px; transition: background-color 0.2s, color 0.2s, transform 0.1s; }
+    .clear-kbd { font-family: inherit; font-size: 0.65rem; background: #e5e7eb; color: #374151; padding: 1px 4px; border-radius: 3px; border: 1px solid #d1d5db; font-weight: 500; }
+    .btn-clear:hover { background-color: #f3f4f6; color: #111827; }
+    .btn-clear:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+    .btn-clear:active { transform: scale(0.9); }
+    .btn-submit { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.1s; }
+    .btn-submit:hover:not(:disabled) { background: #1d4ed8; }
+    .btn-submit:focus-visible { outline: 3px solid #60a5fa; }
+    .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; }
+    .btn-submit:active:not(:disabled) { transform: scale(0.97); }
+
+    .banner { display: none; align-items: center; justify-content: space-between; gap: 8px; margin-top: 16px; padding: 12px; border-radius: 6px; background-color: #ecfdf5; color: #065f46; font-weight: 500; border: 1px solid #a7f3d0; }
+    .btn-close { background: none; border: none; color: #065f46; font-size: 1.25rem; font-weight: bold; cursor: pointer; padding: 4px 8px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: background-color 0.2s, color 0.2s, transform 0.1s; }
+    .btn-close:hover { background-color: #d1fae5; color: #047857; }
+    .btn-close:focus-visible { outline: 2px solid #047857; outline-offset: 1px; }
+    .btn-close:active { transform: scale(0.9); }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    .suggestions-container { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+    .suggestion-label { font-size: 0.75rem; color: #4b5563; font-weight: 500; }
+    .suggestion-pill { background: #f3f4f6; border: 1px solid #d1d5db; color: #374151; font-size: 0.75rem; padding: 4px 8px; border-radius: 9999px; cursor: pointer; transition: background-color 0.2s, border-color 0.2s, transform 0.1s; font-weight: 500; }
+    .suggestion-pill:hover { background: #e5e7eb; border-color: #9ca3af; }
+    .suggestion-pill:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+    .suggestion-pill:active { transform: scale(0.95); }
+    .suggestion-pill:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+    .char-counter { font-size: 0.75rem; color: #4b5563; text-align: right; margin-top: 4px; font-weight: 500; }
+    .char-counter.warning { color: #b45309; }
+    .char-counter.limit { color: #dc2626; font-weight: 700; }
+    .text-input:disabled { background-color: #f3f4f6; cursor: not-allowed; opacity: 0.7; }
+    .text-input.input-error { border-color: #dc2626; outline-color: #dc2626; }
+    .btn-clear:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .spinner {
+      display: inline-block;
+      width: 1rem;
+      height: 1rem;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin-right: 8px;
+      vertical-align: -0.125em;
+    }
+  </style>
+</head>
+<body>
+  <div id="sr-announcer" class="sr-only" role="status" aria-live="polite"></div>
+  <h1 style="font-size: 1.8rem; margin-bottom: 12px;">AI Video Editor 🎬</h1>
+  <p style="margin-bottom: 24px; color: #4b5563;">Create high-quality cuts with our AI engine.</p>
+  <form id="editor-form" novalidate aria-label="Video generator" style="display: flex; flex-direction: column; gap: 16px;">
+    <div>
+      <label for="prompt" class="field-label">
+        AI Editing Prompt <span style="color: #dc2626;" aria-hidden="true">*</span>
+      </label>
+      <div class="input-wrapper">
+        <input id="prompt" class="text-input" type="text" required maxlength="100" placeholder="e.g., Trim silent parts and zoom in" />
+        <button id="clear-prompt" class="btn-clear" type="button" aria-label="Clear prompt text" title="Clear prompt (Esc)"><kbd class="clear-kbd" aria-hidden="true">Esc</kbd>&times;</button>
+      </div>
+      <div id="char-counter" class="char-counter" aria-hidden="true">0/100</div>
+      <div id="prompt-error" class="error-message" role="alert" style="display: none; color: #dc2626; font-size: 0.8125rem; margin-top: 4px; font-weight: 500;">Please enter a prompt before generating.</div>
+      <div class="suggestions-container">
+        <span class="suggestion-label">Suggestions:</span>
+        <button type="button" class="suggestion-pill" data-text="Trim silent parts">Trim silence</button>
+        <button type="button" class="suggestion-pill" data-text="Zoom in on the speaker">Zoom speaker</button>
+        <button type="button" class="suggestion-pill" data-text="Add auto-subtitles">Add subtitles</button>
+      </div>
+    </div>
+    <button id="submit-btn" class="btn-submit" type="submit" aria-label="Generate video">
+      Generate Video
+    </button>
+  </form>
+  <div id="success-banner" class="banner" role="status" aria-live="polite">
+    <span id="success-text"></span>
+    <button id="close-banner" class="btn-close" aria-label="Dismiss success message" type="button">&times;</button>
+  </div>
+  <script>
+    const form = document.getElementById('editor-form');
+    const btn = document.getElementById('submit-btn');
+    const banner = document.getElementById('success-banner');
+    const bannerText = document.getElementById('success-text');
+    const closeBtn = document.getElementById('close-banner');
+    const promptInput = document.getElementById('prompt');
+    const clearBtn = document.getElementById('clear-prompt');
+    const suggestionPills = document.querySelectorAll('.suggestion-pill');
+    const srAnnouncer = document.getElementById('sr-announcer');
+    const promptError = document.getElementById('prompt-error');
+    const charCounter = document.getElementById('char-counter');
+    let lastMilestone = 0;
+
+    function updateCharCounter() {
+      const len = promptInput.value.length;
+      if (charCounter) {
+        charCounter.textContent = `${len}/100`;
+        charCounter.classList.toggle('warning', len >= 80 && len < 100);
+        charCounter.classList.toggle('limit', len >= 100);
+      }
+      let currentMilestone = 0;
+      if (len >= 100) currentMilestone = 100;
+      else if (len >= 95) currentMilestone = 95;
+      else if (len >= 90) currentMilestone = 90;
+      else if (len >= 80) currentMilestone = 80;
+
+      if (currentMilestone !== lastMilestone && currentMilestone > 0 && srAnnouncer) {
+        srAnnouncer.textContent = `Character limit: ${len} of 100 characters used.`;
+      }
+      lastMilestone = currentMilestone;
+    }
+
+    function updateClearBtnVisibility() {
+      clearBtn.style.display = promptInput.value.trim().length > 0 ? 'flex' : 'none';
+    }
+
+    function clearError() {
+      if (promptError) promptError.style.display = 'none';
+      promptInput.classList.remove('input-error');
+      promptInput.setAttribute('aria-invalid', 'false');
+    }
+
+    promptInput.addEventListener('input', () => {
+      updateClearBtnVisibility();
+      updateCharCounter();
+      clearError();
+    });
+
+    promptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && promptInput.value.length > 0 && !promptInput.disabled) {
+        e.preventDefault();
+        promptInput.value = '';
+        updateClearBtnVisibility();
+        updateCharCounter();
+        clearError();
+        if (srAnnouncer) {
+          srAnnouncer.textContent = 'Prompt text cleared.';
+        }
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      promptInput.value = '';
+      updateClearBtnVisibility();
+      updateCharCounter();
+      clearError();
+      promptInput.focus();
+      if (srAnnouncer) {
+        srAnnouncer.textContent = 'Prompt text cleared.';
+      }
+    });
+
+    suggestionPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        const text = pill.getAttribute('data-text');
+        promptInput.value = text;
+        updateClearBtnVisibility();
+        updateCharCounter();
+        clearError();
+        promptInput.focus();
+        if (srAnnouncer) {
+          srAnnouncer.textContent = `Applied suggestion: "${text}". Input field focused.`;
+        }
+      });
+    });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!promptInput.value.trim()) {
+        promptInput.classList.add('input-error');
+        promptInput.setAttribute('aria-invalid', 'true');
+        promptInput.setAttribute('aria-describedby', 'prompt-error');
+        if (promptError) promptError.style.display = 'block';
+        promptInput.focus();
+        return;
+      }
+      clearError();
+      btn.disabled = true;
+      btn.setAttribute('aria-busy', 'true');
+      btn.innerHTML = '<span class="spinner" aria-hidden="true"></span>Generating...';
+      btn.setAttribute('aria-label', 'Generating video, please wait');
+      promptInput.disabled = true;
+      clearBtn.disabled = true;
+      suggestionPills.forEach(pill => pill.disabled = true);
+      banner.style.display = 'none';
+
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.removeAttribute('aria-busy');
+        btn.innerHTML = 'Generate Video';
+        btn.setAttribute('aria-label', 'Generate video');
+        promptInput.disabled = false;
+        clearBtn.disabled = false;
+        suggestionPills.forEach(pill => pill.disabled = false);
+        bannerText.textContent = '✨ AI video cuts generated successfully!';
+        banner.style.display = 'flex';
+      }, 1200);
+    });
+
+    closeBtn.addEventListener('click', () => {
+      banner.style.display = 'none';
+      promptInput.focus();
+    });
+  </script>
+</body>
+</html>
