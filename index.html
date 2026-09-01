@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Video Editor</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 400px; margin: 40px auto; padding: 20px; color: #1f2937; }
+    .field-label { display: block; font-weight: 600; margin-bottom: 8px; }
+    .text-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+    .text-input:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+    .btn-submit { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.1s; }
+    .btn-submit:hover { background: #1d4ed8; }
+    .btn-submit:active:not(:disabled), .pill:active:not(:disabled) { transform: scale(0.96); }
+    .btn-submit:focus-visible { outline: 3px solid #60a5fa; }
+    .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; }
+    .suggestions { display: flex; gap: 8px; margin-top: 8px; }
+    .pill { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 9999px; padding: 4px 10px; font-size: 0.82rem; cursor: pointer; color: #374151; transition: all 0.15s; }
+    .pill:hover:not(:disabled) { background: #e5e7eb; color: #111827; }
+    .pill:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+    .pill:disabled { opacity: 0.5; cursor: not-allowed; }
+    .banner { display: none; margin-top: 16px; padding: 12px; border-radius: 6px; background-color: #ecfdf5; color: #065f46; font-weight: 500; border: 1px solid #a7f3d0; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+  </style>
+</head>
+<body>
+  <h1 style="font-size: 1.8rem; margin-bottom: 12px;">AI Video Editor 🎬</h1>
+  <p style="margin-bottom: 24px; color: #4b5563;">Create high-quality cuts with our AI engine.</p>
+  <form id="editor-form" aria-label="Video generator" style="display: flex; flex-direction: column; gap: 16px;">
+    <div>
+      <label for="prompt" class="field-label">
+        AI Editing Prompt <span style="color: #dc2626;" aria-hidden="true">*</span>
+      </label>
+      <input id="prompt" class="text-input" type="text" required placeholder="e.g., Trim silent parts and zoom in" />
+      <div class="suggestions" aria-label="Preset prompt suggestions">
+        <button type="button" class="pill" data-prompt="Trim silent parts" aria-label="Use suggestion: Trim silent parts" title="Use suggestion: Trim silent parts">✂️ Trim silences</button>
+        <button type="button" class="pill" data-prompt="Auto-zoom on speaker" aria-label="Use suggestion: Auto-zoom on speaker" title="Use suggestion: Auto-zoom on speaker">🔍 Auto-zoom</button>
+      </div>
+    </div>
+    <button id="submit-btn" class="btn-submit" type="submit" aria-label="Generate video">
+      Generate Video
+    </button>
+  </form>
+  <div id="status-announcer" class="sr-only" role="status" aria-live="polite"></div>
+  <div id="success-banner" class="banner" role="status" aria-live="polite"></div>
+  <script>
+    const form = document.getElementById('editor-form');
+    const btn = document.getElementById('submit-btn');
+    const promptInput = document.getElementById('prompt');
+    const banner = document.getElementById('success-banner');
+    const announcer = document.getElementById('status-announcer');
+    const pills = document.querySelectorAll('.pill');
+
+    pills.forEach(p => p.addEventListener('click', () => {
+      promptInput.value = p.dataset.prompt;
+      promptInput.focus();
+      announcer.textContent = `Applied suggestion: ${p.dataset.prompt}`;
+    }));
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      pills.forEach(p => p.disabled = true);
+      btn.innerHTML = 'Generating...';
+      btn.setAttribute('aria-label', 'Generating video, please wait');
+      banner.style.display = 'none';
+      setTimeout(() => {
+        btn.disabled = false;
+        pills.forEach(p => p.disabled = false);
+        btn.innerHTML = 'Generate Video';
+        btn.setAttribute('aria-label', 'Generate video');
+        banner.textContent = '✨ AI video cuts generated successfully!';
+        banner.style.display = 'block';
+      }, 1200);
+    });
+  </script>
+</body>
+</html>
