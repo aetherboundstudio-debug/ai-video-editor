@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Video Editor</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 400px; margin: 40px auto; padding: 20px; color: #1f2937; }
+    .field-label { display: block; font-weight: 600; margin-bottom: 8px; }
+    .input-container { position: relative; width: 100%; }
+    .text-input { width: 100%; padding: 10px 36px 10px 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+    .text-input:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+    .text-input.invalid { border-color: #dc2626; }
+    .text-input:disabled { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
+    .text-input.shake { animation: shake 0.4s ease-in-out; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-4px); }
+      40%, 80% { transform: translateX(4px); }
+    }
+    .btn-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 4px; color: #4b5563; cursor: pointer; display: none; align-items: center; justify-content: center; border-radius: 50%; width: 24px; height: 24px; transition: all 0.2s; font-size: 14px; line-height: 1; }
+    .btn-clear:hover:not(:disabled) { background: #f3f4f6; color: #4b5563; }
+    .btn-clear:focus-visible { outline: 2px solid #2563eb; color: #1f2937; }
+    .btn-clear:disabled { color: #d1d5db; cursor: not-allowed; }
+    .btn-clear:active:not(:disabled) { transform: translateY(-50%) scale(0.92); }
+    .btn-submit { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-submit:hover:not(:disabled) { background: #1d4ed8; }
+    .btn-submit:focus-visible { outline: 3px solid #60a5fa; }
+    .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; }
+    .btn-submit:active:not(:disabled) { transform: scale(0.97); }
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .banner { display: none; opacity: 0; transform: translateY(-8px); transition: opacity 0.3s ease, transform 0.3s ease; margin-top: 16px; padding: 12px; border-radius: 6px; background-color: #ecfdf5; color: #065f46; font-weight: 500; border: 1px solid #a7f3d0; align-items: center; justify-content: space-between; gap: 8px; }
+    .banner.show { display: flex; opacity: 1; transform: translateY(0); }
+    .btn-close { background: none; border: none; color: #065f46; font-size: 1.25rem; font-weight: bold; cursor: pointer; padding: 4px 8px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: background-color 0.2s, color 0.2s; line-height: 1; }
+    .btn-close:hover:not(:disabled) { background-color: #d1fae5; color: #047857; }
+    .btn-close:focus-visible { outline: 2px solid #047857; outline-offset: 1px; }
+    .btn-close:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-close:active:not(:disabled) { transform: scale(0.95); }
+    .suggestions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .pill-btn { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+    .pill-btn:hover:not(:disabled) { background: #e5e7eb; color: #1f2937; }
+    .pill-btn:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+    .pill-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .pill-btn:active:not(:disabled) { transform: scale(0.95); }
+    .pill-btn[aria-pressed="true"] { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; font-weight: 600; }
+    .pill-btn[aria-pressed="true"]:hover:not(:disabled) { background: #bfdbfe; color: #1e40af; }
+    .pill-btn[aria-pressed="true"]:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 1px; }
+    .undo-bar { display: none; align-items: center; justify-content: space-between; font-size: 0.8rem; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 6px 12px; border-radius: 6px; margin-top: 8px; }
+    .btn-undo { background: none; border: none; color: #2563eb; font-weight: 600; cursor: pointer; padding: 2px 6px; border-radius: 4px; text-decoration: underline; }
+    .btn-undo:hover:not(:disabled) { background: #dbeafe; color: #1d4ed8; }
+    .btn-undo:focus-visible { outline: 2px solid #2563eb; }
+    .btn-undo:active:not(:disabled) { transform: scale(0.95); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    .char-count { font-size: 0.8rem; color: #4b5563; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); display: inline-block; transform-origin: right center; }
+    .char-count.warn { color: #b45309; font-weight: 600; transform: scale(1.06); }
+    .char-count.max { color: #b91c1c; font-weight: bold; transform: scale(1.12); }
+    .char-progress-container { width: 100%; height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden; margin-top: 6px; display: none; }
+    .char-progress-bar { height: 100%; width: 0%; background: #2563eb; transition: width 0.2s ease, background-color 0.2s ease; }
+    .char-progress-bar.warn { background: #b45309; }
+    .char-progress-bar.max { background: #b91c1c; }
+    @media (prefers-reduced-motion: reduce) {
+      .text-input.shake { animation: none; }
+      .spinner { animation: none; }
+      .banner { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <h1 style="font-size: 1.8rem; margin-bottom: 12px;">AI Video Editor 🎬</h1>
+  <p style="margin-bottom: 24px; color: #4b5563;">Create high-quality cuts with our AI engine.</p>
+  <form id="editor-form" aria-label="Video generator" novalidate style="display: flex; flex-direction: column; gap: 16px;">
+    <div>
+      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+        <label for="prompt" class="field-label" style="margin-bottom: 0;">
+          AI Editing Prompt <span style="color: #dc2626;" aria-hidden="true">*</span>
+        </label>
+        <span id="char-counter" class="char-count">0 / 100</span>
+        <div id="sr-char-announcer" class="sr-only" role="status" aria-live="polite"></div>
+      </div>
+      <div class="input-container">
+        <input id="prompt" class="text-input" type="text" required maxlength="100" placeholder="e.g., Trim silent parts and zoom in" />
+        <button id="clear-btn" class="btn-clear" type="button" aria-label="Clear prompt (Esc)" title="Clear prompt (Esc)" aria-keyshortcuts="Escape" aria-controls="prompt"><span aria-hidden="true">×</span></button>
+      </div>
+      <div id="error-msg" style="color: #dc2626; font-size: 0.8rem; font-weight: 500; margin-top: 4px; display: none;" role="alert">Please enter an AI editing prompt before generating.</div>
+      <div id="char-progress-container" class="char-progress-container" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Prompt character limit progress">
+        <div id="char-progress-bar" class="char-progress-bar"></div>
+      </div>
+      <div id="hint-text" style="font-size: 0.75rem; color: #4b5563; margin-top: 4px; display: none; text-align: right;">Press <kbd style="background: #e5e7eb; padding: 1px 4px; border-radius: 3px; font-family: inherit;">Esc</kbd> to clear • <kbd id="submit-kbd" style="background: #e5e7eb; padding: 1px 4px; border-radius: 3px; font-family: inherit;">Ctrl+Enter</kbd> to submit</div>
+      <div id="undo-container" class="undo-bar" aria-live="polite" role="status">
+        <span>Cleared prompt</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <kbd id="undo-kbd" style="background: #bfdbfe; color: #1e40af; padding: 1px 4px; border-radius: 3px; font-family: inherit; font-size: 0.75rem; font-weight: 500; display: none;"></kbd>
+          <button id="undo-btn" class="btn-undo" type="button" aria-label="Undo action and restore previous prompt" title="Undo action and restore previous prompt" aria-keyshortcuts="Control+Z Meta+Z" aria-controls="prompt">Undo</button>
+        </div>
+      </div>
+      <div class="suggestions" role="group" aria-label="Quick prompt suggestions">
+        <button type="button" class="pill-btn" data-value="Trim silent parts" aria-pressed="false" aria-label="Use suggestion: Trim silent parts" title="Use suggestion: Trim silent parts" aria-controls="prompt">Trim silence ✂️</button>
+        <button type="button" class="pill-btn" data-value="Add captions automatically" aria-pressed="false" aria-label="Use suggestion: Add captions automatically" title="Use suggestion: Add captions automatically" aria-controls="prompt">Add captions 💬</button>
+        <button type="button" class="pill-btn" data-value="Zoom in on active speaker" aria-pressed="false" aria-label="Use suggestion: Zoom in on active speaker" title="Use suggestion: Zoom in on active speaker" aria-controls="prompt">Auto-zoom 🔍</button>
+      </div>
+    </div>
+    <button id="submit-btn" class="btn-submit" type="submit" aria-label="Generate video" title="Generate video (Ctrl+Enter)" aria-keyshortcuts="Control+Enter Meta+Enter">
+      Generate Video
+    </button>
+  </form>
+  <div id="success-banner" class="banner" role="status" aria-live="polite">
+    <span id="success-text"></span>
+    <button id="close-banner" class="btn-close" aria-label="Dismiss success message (Esc)" aria-describedby="success-text" type="button" title="Dismiss success message (Esc)" aria-keyshortcuts="Escape">&times;</button>
+  </div>
+  <script>
+    const form = document.getElementById('editor-form');
+    const btn = document.getElementById('submit-btn');
+    const banner = document.getElementById('success-banner');
+    const bannerText = document.getElementById('success-text');
+    const closeBtn = document.getElementById('close-banner');
+    const input = document.getElementById('prompt');
+    const charCounter = document.getElementById('char-counter');
+    const srCharAnnouncer = document.getElementById('sr-char-announcer');
+    const hintText = document.getElementById('hint-text');
+    const clearBtn = document.getElementById('clear-btn');
+    const pills = document.querySelectorAll('.pill-btn');
+    const undoContainer = document.getElementById('undo-container');
+    const undoBtn = document.getElementById('undo-btn');
+    const undoKbd = document.getElementById('undo-kbd');
+    const charProgressContainer = document.getElementById('char-progress-container');
+    const charProgressBar = document.getElementById('char-progress-bar');
+    const errorMsg = document.getElementById('error-msg');
+
+    let previousValue = '';
+    let lastAnnouncedMilestone = 0;
+
+    function clearError() {
+      input.classList.remove('invalid');
+      input.removeAttribute('aria-invalid');
+      input.removeAttribute('aria-describedby');
+      if (errorMsg) errorMsg.style.display = 'none';
+    }
+
+    // Detect OS dynamically and configure the undo keyboard shortcut label
+    const submitKbd = document.getElementById('submit-kbd');
+    const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+    const undoShortcut = isMac ? '⌘Z' : 'Ctrl+Z';
+    if (undoKbd) {
+      undoKbd.textContent = undoShortcut;
+    }
+    if (submitKbd) {
+      submitKbd.textContent = isMac ? '⌘Enter' : 'Ctrl+Enter';
+    }
+    btn.setAttribute('title', `Generate video (${isMac ? '⌘Enter' : 'Ctrl+Enter'})`);
+    if (undoBtn) {
+      undoBtn.setAttribute('aria-label', `Undo action and restore previous prompt (${undoShortcut})`);
+      undoBtn.setAttribute('title', `Undo action and restore previous prompt (${undoShortcut})`);
+    }
+
+    function updatePillStates() {
+      const currentVal = input.value.trim();
+      pills.forEach(pill => {
+        const val = pill.getAttribute('data-value');
+        const isActive = currentVal === val;
+        pill.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        const labelText = isActive ? `Remove suggestion: ${val}` : `Use suggestion: ${val}`;
+        pill.setAttribute('aria-label', labelText);
+        pill.setAttribute('title', labelText);
+      });
+    }
+
+    function updateCountersAndHints() {
+      const len = input.value.length;
+      charCounter.textContent = `${len} / 100`;
+
+      updatePillStates();
+
+      charCounter.classList.remove('warn', 'max');
+      charProgressBar.classList.remove('warn', 'max');
+      if (len >= 100) {
+        charCounter.classList.add('max');
+        charProgressBar.classList.add('max');
+      } else if (len >= 80) {
+        charCounter.classList.add('warn');
+        charProgressBar.classList.add('warn');
+      }
+
+      if (len > 0) {
+        charProgressContainer.style.display = 'block';
+        charProgressContainer.setAttribute('aria-valuenow', len);
+        charProgressContainer.setAttribute('aria-valuetext', `${len} of 100 characters used`);
+        charProgressBar.style.width = `${len}%`;
+      } else {
+        charProgressContainer.style.display = 'none';
+        charProgressContainer.setAttribute('aria-valuenow', 0);
+        charProgressContainer.setAttribute('aria-valuetext', '0 of 100 characters used');
+        charProgressBar.style.width = '0%';
+      }
+
+      hintText.style.display = len > 0 ? 'block' : 'none';
+      clearBtn.style.display = len > 0 ? 'flex' : 'none';
+
+      if (len > 0) {
+        const truncatedVal = input.value.length > 20 ? input.value.slice(0, 17) + '...' : input.value;
+        const clearLabel = `Clear prompt "${truncatedVal}" (Esc)`;
+        clearBtn.setAttribute('aria-label', clearLabel);
+        clearBtn.setAttribute('title', clearLabel);
+      } else {
+        clearBtn.setAttribute('aria-label', 'Clear prompt (Esc)');
+        clearBtn.setAttribute('title', 'Clear prompt (Esc)');
+      }
+
+      if (!input.classList.contains('invalid')) {
+        if (len > 0) {
+          input.setAttribute('aria-describedby', 'hint-text');
+        } else {
+          input.removeAttribute('aria-describedby');
+        }
+      }
+
+      // Screen reader announcements at milestones (80%, 90%, 95%, 100%) and when cleared
+      const milestones = [80, 90, 95, 100];
+      if (len === 0) {
+        if (lastAnnouncedMilestone !== 0) {
+          srCharAnnouncer.textContent = 'Character counter cleared';
+          lastAnnouncedMilestone = 0;
+        }
+      } else if (milestones.includes(len)) {
+        if (lastAnnouncedMilestone !== len) {
+          srCharAnnouncer.textContent = `${len} of 100 characters used`;
+          lastAnnouncedMilestone = len;
+        }
+      } else {
+        if (len !== lastAnnouncedMilestone) {
+          lastAnnouncedMilestone = null;
+        }
+      }
+    }
+
+    function clearStatusBanner() {
+      banner.classList.remove('show');
+      banner.style.display = 'none';
+    }
+
+    function showUndo(oldVal, actionMessage) {
+      if (!oldVal || oldVal.trim() === '') {
+        hideUndo();
+        return;
+      }
+      previousValue = oldVal;
+      const span = undoContainer.querySelector('span');
+      if (span) {
+        span.textContent = actionMessage;
+      }
+      const truncatedVal = oldVal.length > 25 ? oldVal.slice(0, 22) + '...' : oldVal;
+      const undoLabel = `Undo: restore "${truncatedVal}" (${undoShortcut})`;
+      undoBtn.setAttribute('aria-label', undoLabel);
+      undoBtn.setAttribute('title', undoLabel);
+
+      undoContainer.style.display = 'flex';
+      if (undoKbd) {
+        undoKbd.style.display = 'inline-block';
+      }
+    }
+
+    function hideUndo() {
+      undoContainer.style.display = 'none';
+      if (undoKbd) {
+        undoKbd.style.display = 'none';
+      }
+      undoBtn.setAttribute('aria-label', `Undo action and restore previous prompt (${undoShortcut})`);
+      undoBtn.setAttribute('title', `Undo action and restore previous prompt (${undoShortcut})`);
+    }
+
+    input.addEventListener('input', () => {
+      if (input.disabled) return;
+      clearError();
+      updateCountersAndHints();
+      clearStatusBanner();
+      hideUndo();
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (input.disabled) return;
+
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        if (typeof form.requestSubmit === 'function') {
+          form.requestSubmit();
+        } else {
+          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+        return;
+      }
+
+      // If we are at maximum length and user tries to type another printable character, shake
+      const isPrintable = e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
+      if (input.value.length >= 100 && isPrintable) {
+        input.classList.remove('shake');
+        void input.offsetWidth; // Force reflow
+        input.classList.add('shake');
+
+        // Announce immediately to screen readers
+        srCharAnnouncer.textContent = 'Character limit of 100 reached';
+
+        // Prevent typing beyond 100 characters (though maxlength also handles it, we enforce/provide feedback here)
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        if (input.classList.contains('invalid')) {
+          clearError();
+          e.preventDefault();
+        }
+        if (input.value.length > 0) {
+          const oldVal = input.value;
+          input.value = '';
+          clearError();
+          updateCountersAndHints();
+          clearStatusBanner();
+          showUndo(oldVal, 'Cleared prompt');
+          e.preventDefault();
+        }
+      }
+    });
+
+    input.addEventListener('paste', (e) => {
+      if (input.disabled) return;
+      const pastedText = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+      const currentLen = input.value.length;
+      const selectionLen = (input.selectionEnd || 0) - (input.selectionStart || 0);
+      if (currentLen - selectionLen + pastedText.length > 100) {
+        input.classList.remove('shake');
+        void input.offsetWidth;
+        input.classList.add('shake');
+        if (srCharAnnouncer) {
+          srCharAnnouncer.textContent = currentLen >= 100 && selectionLen === 0
+            ? 'Character limit of 100 reached'
+            : 'Pasted text truncated to 100 character limit';
+          lastAnnouncedMilestone = 100;
+        }
+      }
+    });
+
+    input.addEventListener('animationend', () => {
+      input.classList.remove('shake');
+    });
+
+    clearBtn.addEventListener('click', () => {
+      if (clearBtn.disabled) return;
+      const oldVal = input.value;
+      input.value = '';
+      clearError();
+      updateCountersAndHints();
+      clearStatusBanner();
+      showUndo(oldVal, 'Cleared prompt');
+      input.focus();
+    });
+
+    pills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        if (pill.disabled) return;
+        const oldVal = input.value;
+        const pillVal = pill.getAttribute('data-value');
+        clearError();
+        if (oldVal.trim() === pillVal) {
+          input.value = '';
+          updateCountersAndHints();
+          clearStatusBanner();
+          showUndo(oldVal, 'Removed suggestion');
+          if (srCharAnnouncer) srCharAnnouncer.textContent = `Removed suggestion: ${pillVal}`;
+        } else {
+          input.value = pillVal;
+          updateCountersAndHints();
+          clearStatusBanner();
+          if (oldVal && oldVal.trim() !== '') {
+            showUndo(oldVal, 'Replaced prompt');
+          } else {
+            hideUndo();
+          }
+          if (srCharAnnouncer) srCharAnnouncer.textContent = `Applied suggestion: ${pillVal}`;
+        }
+        input.focus();
+      });
+    });
+
+    function handleUndo() {
+      if (undoBtn.disabled) return;
+      const restored = previousValue;
+      input.value = restored;
+      updateCountersAndHints();
+      clearStatusBanner();
+      hideUndo();
+      if (srCharAnnouncer) srCharAnnouncer.textContent = `Restored previous prompt: ${restored}`;
+      input.focus();
+    }
+
+    undoBtn.addEventListener('click', handleUndo);
+
+    closeBtn.addEventListener('click', () => {
+      if (closeBtn.disabled) return;
+      clearStatusBanner();
+      input.focus();
+    });
+
+    // Global keyboard shortcut listener for Undo and Banner Dismissal
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && banner.classList.contains('show') && !closeBtn.disabled) {
+        e.preventDefault();
+        clearStatusBanner();
+        input.focus();
+        return;
+      }
+
+      // Restrict global shortcut activation to only when the undo bar is visible/active to prevent blocking native browser behaviors.
+      const isUndoVisible = undoContainer.style.display === 'flex';
+      if (!isUndoVisible) return;
+
+      const isZ = e.key === 'z' || e.key === 'Z';
+      const isModifier = isMac ? e.metaKey : e.ctrlKey;
+
+      if (isZ && isModifier) {
+        e.preventDefault();
+        handleUndo();
+      }
+    });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (btn.disabled) return;
+
+      if (!input.value.trim()) {
+        input.classList.add('invalid');
+        input.setAttribute('aria-invalid', 'true');
+        input.setAttribute('aria-describedby', 'error-msg');
+        if (errorMsg) errorMsg.style.display = 'block';
+        input.focus();
+        return;
+      }
+
+      clearError();
+      btn.disabled = true;
+      input.disabled = true;
+      clearBtn.disabled = true;
+      undoBtn.disabled = true;
+      closeBtn.disabled = true;
+      pills.forEach(p => p.disabled = true);
+      hideUndo();
+
+      btn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Generating...';
+      btn.setAttribute('aria-label', 'Generating video, please wait');
+      btn.setAttribute('title', 'Generating video, please wait...');
+      btn.setAttribute('aria-busy', 'true');
+      banner.classList.remove('show');
+      banner.style.display = 'none';
+      setTimeout(() => {
+        btn.disabled = false;
+        input.disabled = false;
+        clearBtn.disabled = false;
+        undoBtn.disabled = false;
+        closeBtn.disabled = false;
+        pills.forEach(p => p.disabled = false);
+
+        btn.innerHTML = 'Generate Video';
+        btn.setAttribute('aria-label', 'Generate video');
+        btn.setAttribute('title', `Generate video (${isMac ? '⌘Enter' : 'Ctrl+Enter'})`);
+        btn.removeAttribute('aria-busy');
+        bannerText.textContent = '✨ AI video cuts generated successfully!';
+        banner.style.display = 'flex';
+        // Force reflow for transitioning from display: none to block with transitions
+        void banner.offsetWidth;
+        banner.classList.add('show');
+        closeBtn.focus();
+      }, 1200);
+    });
+
+  // Synchronize UI state on script initialization
+  updateCountersAndHints();
+  </script>
+</body>
+</html>
